@@ -3,6 +3,16 @@ Define an HPVsim simulation for Ethiopia
 '''
 
 # Standard imports
+# Additions to handle numpy multithreading
+import os
+
+os.environ.update(
+    OMP_NUM_THREADS='1',
+    OPENBLAS_NUM_THREADS='1',
+    NUMEXPR_NUM_THREADS='1',
+    MKL_NUM_THREADS='1',
+)
+
 import numpy as np
 import sciris as sc
 import hpvsim as hpv
@@ -12,44 +22,48 @@ import pylab as pl
 
 # Imports from this repository
 import behavior_inputs as bi
-import utils as ut
 
-#%% Settings and filepaths
+# %% Settings and filepaths
 
 # Debug switch
 debug = 0  # Run with smaller population sizes and in serial
 do_shrink = True  # Do not keep people when running sims (saves memory)
+
+# Run settings
+n_trials    = [8000, 2][debug]  # How many trials to run for calibration
+n_workers   = [40, 4][debug]    # How many cores to use
+storage     = ["mysql://hpvsim_user@localhost/hpvsim_db", None][debug] # Storage for calibrations
 
 # Save settings
 do_save = True
 save_plots = True
 
 
-#%% Simulation creation functions
-def make_sim(calib_pars=None, debug=0, analyzers=None, interventions=None, datafile=None, seed=1, end=2020):
+# %% Simulation creation functions
+def make_sim(calib_pars=None, debug=0, datafile=None, seed=1):
     ''' Define parameters, analyzers, and interventions for the simulation -- not the sim itself '''
 
     pars = dict(
-        n_agents       = [10e3,1e3][debug],
-        dt             = [0.25,1.0][debug],
-        start          = [1960,1980][debug],
-        end            = end,
-        network        = 'default',
-        genotypes      = [16, 18, 'hi5', 'ohr'],
-        location       = 'ethiopia',
-        debut          = dict(f=dict(dist='lognormal', par1=16.8, par2=2.4),
-                              m=dict(dist='lognormal', par1=22.5, par2=3.6)),
-        mixing         = bi.default_mixing,
-        layer_probs    = bi.default_layer_probs,
-        partners       = bi.default_partners,
-        init_hpv_dist  = dict(hpv16=0.4, hpv18=0.25, hi5=0.25, ohr=.1),
-        init_hpv_prev  = {
-            'age_brackets'  : np.array([  12,   17,   24,   34,  44,   64,    80, 150]),
-            'm'             : np.array([ 0.0, 0.25, 0.6, 0.25, 0.05, 0.01, 0.0005, 0]),
-            'f'             : np.array([ 0.0, 0.35, 0.7, 0.25, 0.05, 0.01, 0.0005, 0]),
+        n_agents=[10e3, 1e3][debug],
+        dt=[0.25, 1.0][debug],
+        start=[1960, 1980][debug],
+        end=2020,
+        network='default',
+        genotypes=[16, 18, 'hi5', 'ohr'],
+        location='india',
+        debut=dict(f=dict(dist='lognormal', par1=14.8, par2=2.),
+                   m=dict(dist='lognormal', par1=17.0, par2=2.)),
+        mixing=bi.default_mixing,
+        layer_probs=bi.default_layer_probs,
+        partners=bi.default_partners,
+        init_hpv_dist=dict(hpv16=0.4, hpv18=0.15, hi5=0.15, ohr=0.3),
+        init_hpv_prev={
+            'age_brackets': np.array([12, 17, 24, 34, 44, 64, 80, 150]),
+            'm': np.array([0.0, 0.25, 0.6, 0.25, 0.05, 0.01, 0.0005, 0]),
+            'f': np.array([0.0, 0.35, 0.7, 0.25, 0.05, 0.01, 0.0005, 0]),
         },
-        ms_agent_ratio = 100,
-        verbose        = 0.0,
+        ms_agent_ratio=100,
+        verbose=0.0,
     )
 
     # If calibration parameters have been supplied, use them here
@@ -57,24 +71,18 @@ def make_sim(calib_pars=None, debug=0, analyzers=None, interventions=None, dataf
         pars = sc.mergedicts(pars, calib_pars)
 
     # Create the sim
-    sim = hpv.Sim(pars=pars, interventions=interventions, analyzers=analyzers, datafile=datafile, rand_seed=seed)
+    sim = hpv.Sim(pars=pars, datafile=datafile, rand_seed=seed)
 
     return sim
 
 
-
-#%% Simulation running functions
-def run_sim(calib_pars=None, debug=0, analyzers=None, interventions=None,
-            datafile=None, seed=1, verbose=.1, do_save=False, end=2020):
-
+# %% Simulation running functions
+def run_sim(calib_pars=None, debug=0, datafile=None, seed=1, verbose=.1, do_save=False):
     # Make sim
     sim = make_sim(
         debug=debug,
         seed=seed,
-        end=end,
         datafile=datafile,
-        analyzers=analyzers,
-        interventions=interventions,
         calib_pars=calib_pars
     )
     sim.label = f'Sim--{seed}'
@@ -86,65 +94,103 @@ def run_sim(calib_pars=None, debug=0, analyzers=None, interventions=None,
 
     # Optinally save
     if do_save:
-        sim.save(f'results/ethiopia.sim')
+        sim.save(f'results/india.sim')
 
     return sim
 
 
-def run_sims(parsets=None, debug=False, verbose=-1, analyzers=None, save_results=True, **kwargs):
-    ''' Run multiple simulations with different calibration parameter sets in parallel '''
+def run_calib(n_trials=None, n_workers=None, do_save=True, filestem=''):
 
-    kwargs = sc.mergedicts(dict(debug=debug, verbose=verbose, analyzers=analyzers), kwargs)
-    simlist = sc.parallelize(run_sim, iterkwargs=dict(calib_pars=parsets), kwargs=kwargs, serial=debug, die=True)
-    msim = hpv.MultiSim(simlist)
-    msim.reduce()
-    if save_results:
-        sc.saveobj(f'msim_ethiopia.obj', msim.results)
+    sim = make_sim()
+    datafiles = [
+        f'data/india_hpv_prevalence.csv',
+        f'data/india_cancer_cases.csv',
+        f'data/india_cin1_types.csv',
+        f'data/india_cin3_types.csv',
+        f'data/india_cancer_types.csv',
+    ]
 
-    return msim
+    # Define the calibration parameters
+    calib_pars = dict(
+        beta=[0.05, 0.02, 0.5, 0.01],
+    )
+    genotype_pars = dict(
+        hpv16=dict(
+            transform_prob=[10e-10, 4e-10, 20e-10, 1e-10],
+            sev_fn=dict(k=[0.25, 0.15, 0.4, 0.05]),
+        ),
+        hpv18=dict(
+            transform_prob=[6e-10, 4e-10, 10e-10, 1e-10],
+            sev_fn=dict(k=[0.2, 0.1, 0.35, 0.05]),
+        ),
+        hi5=dict(
+                transform_prob=[3e-10, 2e-10, 5e-10, 1e-10],
+                sev_fn=dict(k=[0.05, 0.04, 0.2, 0.01]),
+            ),
+        ohr=dict(
+            transform_prob=[3e-10, 2e-10, 5e-10, 1e-10],
+            sev_fn=dict(k=[0.05, 0.04, 0.2, 0.01]),
+        ),
+    )
+
+    calib = hpv.Calibration(sim, calib_pars=calib_pars, genotype_pars=genotype_pars,
+                            name=f'india_calib',
+                            datafiles=datafiles,
+                            total_trials=n_trials, n_workers=n_workers,
+                            storage=storage
+                            )
+    calib.calibrate()
+    filename = f'india_calib{filestem}'
+    if do_save:
+        sc.saveobj(f'results/{filename}.obj', calib)
+
+    print(f'Best pars are {calib.best_pars}')
+
+    return sim, calib
 
 
-#%% Run as a script
+def plot_calib(which_pars=0, save_pars=True, filestem=''):
+    filename = f'india_calib{filestem}'
+    calib = sc.load(f'results/{filename}.obj')
+
+    sc.fonts(add=sc.thisdir(aspath=True) / 'Libertinus Sans')
+    sc.options(font='Libertinus Sans')
+    fig = calib.plot(res_to_plot=200, plot_type='sns.boxplot', do_save=False)
+    fig.tight_layout()
+    fig.savefig(f'figures/{filename}.png')
+
+    if save_pars:
+        calib_pars = calib.trial_pars_to_sim_pars(which_pars=which_pars)
+        trial_pars = sc.autolist()
+        for i in range(100):
+            trial_pars += calib.trial_pars_to_sim_pars(which_pars=i)
+        sc.save(f'results//india_pars{filestem}.obj', calib_pars)
+        sc.save(f'results/india_pars{filestem}_all.obj', trial_pars)
+
+    return calib
+
+
+# %% Run as a script
 if __name__ == '__main__':
 
-    # Make a list of what to run, comment out anything you don't want to run
+    # List of what to run
     to_run = [
-        # 'run_single',
-        'run_scenario',
+        'run_sim',
+        # 'run_calib',
+        # 'plot_calib'
     ]
 
     T = sc.timer()  # Start a timer
 
-    calib_pars = sc.loadobj('results/ethiopia_pars_may23_iv.obj')  # Load some parameters from a previous calibration
-
-    # Run and plot a single simulation
-    # Takes <1min to run
-    if 'run_single' in to_run:
-        sim = run_sim(calib_pars=calib_pars)  # Run the simulation
+    if 'run_sim' in to_run:
+        # calib_pars = sc.loadobj('results/india_pars.obj')  # Load parameters from a previous calibration
+        sim = run_sim(calib_pars=None)  # Run the simulation
         sim.plot()  # Plot the simulation
 
-    # Example of how to run a scenario with and without vaccination
-    # Takes ~2min to run
-    if 'run_scenario' in to_run:
-        routine_vx = hpv.routine_vx(product='bivalent', age_range=[9, 10], prob=0.9, start_year=2025)
-        sim_baseline = make_sim(calib_pars=calib_pars, end=2060)
-        sim_scenario = make_sim(calib_pars=calib_pars, end=2060, interventions=routine_vx)
-        msim = hpv.MultiSim(sims=[sim_baseline, sim_scenario])  # Make a multisim for running in parallel
-        msim.run(verbose=0.1)
+    if 'run_calib' in to_run:
+        sim, calib = run_calib(n_trials=n_trials, n_workers=n_workers, do_save=do_save, filestem='')
 
-        # Now plot cancers with & without vaccination
-        ut.set_font(15)
-        pl.figure()
-        res0 = msim.sims[0].results
-        res1 = msim.sims[1].results
-        pl.plot(res0['year'][60:], res0['cancer_incidence'][60:], label='No vaccination')
-        pl.plot(res0['year'][60:], res1['cancer_incidence'][60:], color='r', label='With vaccination')
-        pl.legend()
-        pl.title('Cancer incidence')
-        pl.show()
-
-    # To run more complex scenarios, you may want to set them up in a separate file
-
+    if 'plot_calib' in to_run:
+        calib = plot_calib(save_pars=True, filestem='')
 
     T.toc('Done')  # Print out how long the run took
-
