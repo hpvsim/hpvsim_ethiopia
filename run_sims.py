@@ -128,9 +128,9 @@ def run_calib(n_trials=None, n_workers=None, do_save=True, filestem=''):
 
     sim = make_sim()
     datafiles = [
-        f'data/ethiopia_cancer_cases.csv',
-        f'data/ethiopia_cin_types.csv',
-        f'data/ethiopia_cancer_types.csv',
+        'data/ethiopia_cancer_cases.csv',
+        'data/ethiopia_asr_cancer_incidence.csv',
+        'data/ethiopia_cancer_types.csv',
     ]
 
     # Define the calibration parameters
@@ -177,11 +177,10 @@ def run_calib(n_trials=None, n_workers=None, do_save=True, filestem=''):
 
 
 def get_sb_from_sims(verbose=-1, calib_pars=None, debug=False):
-    '''
+    """
     Run sims with the sexual debut parameters inferred from DHS data, and save
     the proportion of people of each age who've ever had sex
-    '''
-
+    """
 
     sim = run_sim(
         calib_pars=calib_pars,
