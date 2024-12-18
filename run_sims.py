@@ -295,8 +295,8 @@ if __name__ == '__main__':
         # 'run_sim',
         # 'get_behavior',
         # 'age_pyramids',
-        'run_calib',
-        # 'plot_calib'
+        # 'run_calib',
+        'plot_calib'
         # 'run_parsets'
     ]
 
