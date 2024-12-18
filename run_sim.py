@@ -50,7 +50,7 @@ def make_sim(calib_pars=None, debug=0, datafile=None, seed=1):
         end=2020,
         network='default',
         genotypes=[16, 18, 'hi5', 'ohr'],
-        location='india',
+        location='ethiopia',
         debut=dict(f=dict(dist='lognormal', par1=14.8, par2=2.),
                    m=dict(dist='lognormal', par1=17.0, par2=2.)),
         mixing=bi.default_mixing,
@@ -183,8 +183,8 @@ if __name__ == '__main__':
     T = sc.timer()  # Start a timer
 
     if 'run_sim' in to_run:
-        # calib_pars = sc.loadobj('results/india_pars.obj')  # Load parameters from a previous calibration
-        sim = run_sim(calib_pars=None)  # Run the simulation
+        calib_pars = sc.loadobj('results/ethiopia_pars_may23_iv.obj')  # Load parameters from a previous calibration
+        sim = run_sim(calib_pars=calib_pars)  # Run the simulation
         sim.plot()  # Plot the simulation
 
     if 'run_calib' in to_run:
