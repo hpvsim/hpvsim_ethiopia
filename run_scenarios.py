@@ -157,10 +157,10 @@ def make_sims(calib_pars=None, vx_scenarios=None, st_scenarios=None):
     return msim
 
 
-def run_scens(location=None, calib_pars=None, vx_scenarios=None, st_scenarios=None, verbose=0.2):
+def run_scens(calib_pars=None, vx_scenarios=None, st_scenarios=None, verbose=0.2):
     """ Run the simulations """
     """ Run the simulations """
-    msim = make_sims(location=location, calib_pars=calib_pars, vx_scenarios=vx_scenarios, st_scenarios=st_scenarios)
+    msim = make_sims(calib_pars=calib_pars, vx_scenarios=vx_scenarios, st_scenarios=st_scenarios)
     # for sim in msim.sims:
     #     sim.run(verbose=verbose)
     msim.run(verbose=verbose)
