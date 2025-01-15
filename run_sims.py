@@ -296,8 +296,8 @@ if __name__ == '__main__':
         # 'get_behavior',
         # 'age_pyramids',
         # 'run_calib',
-        'plot_calib'
-        # 'run_parsets'
+        # 'plot_calib'
+        'run_parsets'
     ]
 
     T = sc.timer()  # Start a timer
