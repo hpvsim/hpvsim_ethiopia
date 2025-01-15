@@ -177,11 +177,11 @@ st_scenarios = make_st_scenarios(products=['hpv', 'via'])
 if __name__ == '__main__':
 
     T = sc.timer()
-    do_run = True
+    do_run = False
     do_save = False
     do_process = True
 
-    scen_labels = [vxl+', '+stl for vxl,stl in zip(vx_scenarios.keys(), st_scenarios.keys())]
+    scen_labels = [vxl+', '+stl for vxl in vx_scenarios.keys() for stl in st_scenarios.keys()]
 
     # Run scenarios (usually on VMs, runs n_seeds in parallel over M scenarios)
     if do_run:
