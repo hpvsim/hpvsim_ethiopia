@@ -167,6 +167,12 @@ def run_scens(calib_pars=None, vx_scenarios=None, st_scenarios=None, verbose=0.2
     return msim
 
 
+# Define the specific scenarios, which are created above.
+# This is where you can change the scenarios, e.g. add more or change the coverage levels
+vx_scenarios = make_vx_scenarios(coverage_arr=[0.5, 0.9], product='bivalent', start_year=2018)
+st_scenarios = make_st_scenarios(products=['hpv', 'via'])
+
+
 # %% Run as a script
 if __name__ == '__main__':
 
@@ -175,9 +181,6 @@ if __name__ == '__main__':
     do_save = False
     do_process = True
 
-    # Define the specific scenarios, which are created above. This is where you can change the scenarios
-    vx_scenarios = make_vx_scenarios(coverage_arr=[0.9], product='bivalent', start_year=2018)
-    st_scenarios = make_st_scenarios(products=['hpv'])
     scen_labels = [vxl+', '+stl for vxl,stl in zip(vx_scenarios.keys(), st_scenarios.keys())]
 
     # Run scenarios (usually on VMs, runs n_seeds in parallel over M scenarios)
