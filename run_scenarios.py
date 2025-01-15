@@ -25,7 +25,7 @@ import run_sims as rs
 
 # What to run
 debug = 0
-n_seeds = [1, 1][debug]  # How many seeds to run per cluster
+n_seeds = [10, 1][debug]  # How many seeds to run per cluster
 
 
 # %% Functions
@@ -161,9 +161,9 @@ def run_scens(location=None, calib_pars=None, vx_scenarios=None, st_scenarios=No
     """ Run the simulations """
     """ Run the simulations """
     msim = make_sims(location=location, calib_pars=calib_pars, vx_scenarios=vx_scenarios, st_scenarios=st_scenarios)
-    for sim in msim.sims:
-        sim.run(verbose=verbose)
-    # msim.run(verbose=verbose)
+    # for sim in msim.sims:
+    #     sim.run(verbose=verbose)
+    msim.run(verbose=verbose)
     return msim
 
 
