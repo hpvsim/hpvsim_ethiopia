@@ -173,7 +173,7 @@ if __name__ == '__main__':
     T = sc.timer()
     do_run = True
     do_save = False
-    do_process = False
+    do_process = True
 
     # Define the specific scenarios, which are created above. This is where you can change the scenarios
     vx_scenarios = make_vx_scenarios(coverage_arr=[0.9], product='bivalent', start_year=2018)
