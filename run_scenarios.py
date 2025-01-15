@@ -138,7 +138,7 @@ def make_vx_scenarios(coverage_arr, product='bivalent', start_year=2018):
     return vx_scenarios
 
 
-def make_sims(location=None, calib_pars=None, vx_scenarios=None, st_scenarios=None):
+def make_sims(calib_pars=None, vx_scenarios=None, st_scenarios=None):
     """ Set up all scenarios to run in parallel """
 
     all_msims = sc.autolist()
@@ -147,7 +147,7 @@ def make_sims(location=None, calib_pars=None, vx_scenarios=None, st_scenarios=No
             sims = sc.autolist()
             for seed in range(n_seeds):
                 interventions = vx_intv + st_intv
-                sim = rs.make_sim(location=location, calib_pars=calib_pars, debug=debug, interventions=interventions, end=2100, seed=seed)
+                sim = rs.make_sim(calib_pars=calib_pars, debug=debug, interventions=interventions, end=2100, seed=seed)
                 sim.label = f'{vx_name}, {st_name}'
                 sims += sim
             all_msims += hpv.MultiSim(sims)
